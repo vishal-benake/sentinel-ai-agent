@@ -1,0 +1,837 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentinel | AI Incident Agent</title>
+<style>
+:root {
+    --bg: #0b1020;
+    --panel: #121a2d;
+    --panel2: #182238;
+    --border: #26334b;
+    --text: #edf2fc;
+    --muted: #91a0b8;
+    --accent: #718cff;
+    --green: #39c99a;
+    --red: #ff727c;
+    --yellow: #f4bd60;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, Segoe UI, Arial, sans-serif;
+}
+button, select { font: inherit; }
+button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+}
+button:disabled { opacity: .5; cursor: wait; }
+.primary { background: var(--accent); color: white; }
+.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+.success { background: #174d40; color: #7ce4c0; }
+header {
+    height: 70px;
+    padding: 0 5%;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.brand { font-size: 21px; font-weight: 800; letter-spacing: 1px; }
+.brand span { color: var(--accent); }
+.connection { color: var(--green); font-size: 13px; }
+main { max-width: 1250px; margin: 35px auto; padding: 0 22px; }
+.heading { margin-bottom: 25px; }
+.heading h1 { margin: 0 0 8px; font-size: 27px; }
+.heading p, .muted { color: var(--muted); font-size: 14px; }
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 22px;
+}
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+.stat-label { color: var(--muted); font-size: 13px; }
+.stat-value { font-size: 29px; font-weight: 700; margin-top: 10px; }
+.workspace {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 18px;
+    align-items: start;
+}
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 17px;
+}
+.section-title h2 { font-size: 17px; margin: 0; }
+.upload-area {
+    border: 1px dashed #53668c;
+    border-radius: 10px;
+    padding: 25px 12px;
+    text-align: center;
+    margin: 15px 0;
+}
+.upload-area input { max-width: 100%; margin-top: 15px; }
+.full { width: 100%; }
+#uploadMessage, #message {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 12px;
+    overflow-wrap: anywhere;
+}
+.incident {
+    padding: 15px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+.incident.selected { border-color: var(--accent); }
+.incident-top { display: flex; justify-content: space-between; gap: 10px; }
+.incident-name { font-weight: 650; font-size: 14px; }
+.incident-meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.badge {
+    border-radius: 20px;
+    padding: 4px 9px;
+    font-size: 11px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.high { background: #512b35; color: #ff9aa2; }
+.medium { background: #514126; color: #f4d18a; }
+.low { background: #194438; color: #83dfbd; }
+.open { background: #263752; color: #a9c7ff; }
+.resolved { background: #194438; color: #83dfbd; }
+.dismissed { background: #3b3546; color: #c9b8e8; }
+.investigating { background: #493c25; color: #f3d18e; }
+.detail { margin-top: 18px; }
+.detail h3 { font-size: 15px; }
+.detail pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #cbd6e9;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.65;
+    max-height: 500px;
+    overflow: auto;
+}
+.actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
+select {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px;
+}
+.empty { text-align: center; padding: 30px 10px; color: var(--muted); font-size: 13px; }
+footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px; }
+@media(max-width: 800px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .workspace { grid-template-columns: 1fr; }
+    main { margin-top: 24px; }
+}
+
+/* Structured incident and investigation presentation */
+.detail pre { display: none; }
+
+.evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+.evidence-metric, .evidence-card, .history-item {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px;
+    min-width: 0;
+}
+.evidence-metric span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+.evidence-metric strong { font-size: 20px; overflow-wrap: anywhere; }
+.evidence-card { margin-top: 10px; }
+.evidence-card h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #a5b4fc;
+}
+.evidence-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.evidence-table th, .evidence-table td {
+    text-align: left;
+    padding: 9px 7px;
+    border-bottom: 1px solid var(--border);
+    overflow-wrap: anywhere;
+}
+.evidence-table th { color: var(--muted); font-weight: 600; }
+.field-chip {
+    display: inline-block;
+    background: #26334b;
+    color: #cbd5e1;
+    padding: 4px 7px;
+    border-radius: 5px;
+    margin: 2px;
+    font-size: 11px;
+}
+.history-list { display: grid; gap: 9px; margin-top: 10px; }
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.history-transition { font-size: 13px; }
+.history-time { color: var(--muted); font-size: 11px; }
+.report {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    margin-top: 15px;
+}
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.report-header h3 { margin: 0; font-size: 17px; }
+.report-badges { display: flex; gap: 7px; flex-wrap: wrap; }
+.report-badge {
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 650;
+    background: #263752;
+    color: #cbd5e1;
+}
+.report-badge.confirmed { background: #194438; color: #83dfbd; }
+.report-badge.unconfirmed { background: #514126; color: #f4d18a; }
+.report-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.report-stat {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px;
+}
+.report-stat span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 7px; }
+.report-stat strong { font-size: 19px; }
+.report-section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 15px;
+}
+.report-section h4 { margin: 0 0 11px; color: #a5b4fc; font-size: 13px; }
+.report-section p, .report-section li {
+    color: #cbd6e9;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+.report-section p { margin: 7px 0; }
+.report-section ul, .report-section ol { padding-left: 19px; margin: 8px 0; }
+.report-section li { margin-bottom: 7px; }
+.report-section strong { color: #f1f5f9; }
+.report-section code {
+    color: #a5b4fc;
+    background: #202b43;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+.report-empty { color: var(--muted); font-size: 12px; }
+@media(max-width: 550px) {
+    .evidence-grid, .report-stats { grid-template-columns: 1fr; }
+    .evidence-table { font-size: 11px; }
+}
+
+</style>
+</head>
+<body>
+<header>
+    <div class="brand">SENTINEL<span>.</span></div>
+    <div class="connection" id="connection">● Connecting...</div>
+</header>
+
+<main>
+    <div class="heading">
+        <h1>Incident Command Center</h1>
+        <p>Detect data quality issues and investigate them with an AI-powered agent.</p>
+    </div>
+
+    <section class="stats">
+        <div class="card">
+            <div class="stat-label">Total incidents</div>
+            <div class="stat-value" id="totalCount">0</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">High severity</div>
+            <div class="stat-value" id="highCount">0</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Open incidents</div>
+            <div class="stat-value" id="openCount">0</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Resolved</div>
+            <div class="stat-value" id="resolvedCount">0</div>
+        </div>
+    </section>
+
+    <section class="workspace">
+        <div>
+            <div class="card">
+                <div class="section-title">
+                    <h2>Data ingestion</h2>
+                </div>
+                <p class="muted">Upload a CSV dataset to detect incidents.</p>
+                <div class="upload-area">
+                    <div style="font-size:30px">↥</div>
+                    <strong>Select a CSV file</strong>
+                    <div><input type="file" id="csvFile" accept=".csv,text/csv"></div>
+                </div>
+                <button class="primary full" id="uploadButton" onclick="uploadCSV()">Upload and analyze</button>
+                <div id="uploadMessage"></div>
+            </div>
+
+            <div class="card" style="margin-top:18px">
+                <div class="section-title">
+                    <h2>Detected incidents</h2>
+                    <button class="secondary" onclick="loadIncidents()">Refresh</button>
+                </div>
+                <div id="incidentList">
+                    <div class="empty">Loading incidents...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">
+                <h2>Incident investigation</h2>
+                <span class="muted" id="selectedLabel">No selection</span>
+            </div>
+
+            <div id="incidentDetails">
+                <div class="empty">Select an incident to inspect its evidence and generate an investigation report.</div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>Sentinel · AI-powered Data Incident Investigation</footer>
+
+<script>
+const API = "/api/v1";
+let incidents = [];
+let selectedIncidentId = null;
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+
+function renderEvidence(evidence) {
+    if (!evidence || typeof evidence !== "object") {
+        return '<p class="report-empty">No structured evidence available.</p>';
+    }
+
+    const metrics = [];
+    const metricFields = [
+        ["missing_value_count", "Missing values"],
+        ["affected_record_count", "Affected records"],
+        ["duplicate_count", "Duplicate records"],
+        ["total_records", "Total records"],
+        ["type_mismatch_count", "Type mismatches"]
+    ];
+
+    for (const [key, label] of metricFields) {
+        if (evidence[key] !== undefined && typeof evidence[key] !== "object") {
+            metrics.push(`
+                <div class="evidence-metric">
+                    <span>${escapeHTML(label)}</span>
+                    <strong>${escapeHTML(evidence[key])}</strong>
+                </div>
+            `);
+        }
+    }
+
+    let html = metrics.length ? `<div class="evidence-grid">${metrics.join("")}</div>` : "";
+
+    if (evidence.missing_by_field && typeof evidence.missing_by_field === "object") {
+        html += renderCountTable("Missing values by field", evidence.missing_by_field);
+    }
+    if (evidence.missing_field_counts && typeof evidence.missing_field_counts === "object") {
+        html += renderCountTable("Missing fields", evidence.missing_field_counts);
+    }
+    if (evidence.unexpected_field_counts && typeof evidence.unexpected_field_counts === "object") {
+        html += renderCountTable("Unexpected fields", evidence.unexpected_field_counts);
+    }
+
+    if (Array.isArray(evidence.locations) && evidence.locations.length) {
+        html += `
+            <div class="evidence-card">
+                <h4>Missing-value locations</h4>
+                <table class="evidence-table">
+                    <thead><tr><th>Record</th><th>Field</th></tr></thead>
+                    <tbody>
+                        ${evidence.locations.map(location => `
+                            <tr>
+                                <td>${escapeHTML(location.record_index)}</td>
+                                <td><span class="field-chip">${escapeHTML(location.field)}</span></td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    if (Array.isArray(evidence.affected_records) && evidence.affected_records.length) {
+        html += `
+            <div class="evidence-card">
+                <h4>Affected records</h4>
+                <table class="evidence-table">
+                    <thead><tr><th>Record</th><th>Missing fields</th><th>Unexpected fields</th></tr></thead>
+                    <tbody>
+                        ${evidence.affected_records.map(record => `
+                            <tr>
+                                <td>${escapeHTML(record.record_index)}</td>
+                                <td>${renderFieldChips(record.missing_fields)}</td>
+                                <td>${renderFieldChips(record.unexpected_fields)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    if (evidence.locations_truncated !== undefined || evidence.affected_records_truncated !== undefined) {
+        const truncated = evidence.locations_truncated === true || evidence.affected_records_truncated === true;
+        html += `<p class="muted">${truncated ? "Evidence list is truncated." : "All available affected-record locations are shown."}</p>`;
+    }
+
+    if (!html) {
+        html = `
+            <div class="evidence-card">
+                <h4>Evidence details</h4>
+                ${Object.entries(evidence).map(([key, value]) => `
+                    <p><strong>${escapeHTML(key.replaceAll("_", " "))}:</strong>
+                    ${escapeHTML(typeof value === "object" ? JSON.stringify(value) : value)}</p>
+                `).join("")}
+            </div>
+        `;
+    }
+
+    return html;
+}
+
+function renderFieldChips(fields) {
+    if (!Array.isArray(fields) || !fields.length) {
+        return '<span class="muted">None</span>';
+    }
+    return fields.map(field => `<span class="field-chip">${escapeHTML(field)}</span>`).join("");
+}
+
+function renderCountTable(title, counts) {
+    const entries = Object.entries(counts);
+    if (!entries.length) return "";
+    return `
+        <div class="evidence-card">
+            <h4>${escapeHTML(title)}</h4>
+            <table class="evidence-table">
+                <thead><tr><th>Field</th><th>Count</th></tr></thead>
+                <tbody>
+                    ${entries.map(([field, count]) => `
+                        <tr><td>${escapeHTML(field)}</td><td>${escapeHTML(count)}</td></tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderStatusHistory(history) {
+    if (!Array.isArray(history) || !history.length) {
+        return '<p class="report-empty">No status changes recorded.</p>';
+    }
+
+    return `
+        <div class="history-list">
+            ${history.map(entry => `
+                <div class="history-item">
+                    <div class="history-transition">
+                        <span class="badge ${escapeHTML(entry.old_status || "")}">${escapeHTML(entry.old_status || "—")}</span>
+                        &nbsp;→&nbsp;
+                        <span class="badge ${escapeHTML(entry.new_status || "")}">${escapeHTML(entry.new_status || "—")}</span>
+                    </div>
+                    <div class="history-time">${escapeHTML(entry.changed_at || "")}</div>
+                </div>
+            `).join("")}
+        </div>
+    `;
+}
+
+function formatReportText(text) {
+    let safe = escapeHTML(text);
+    safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
+    safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    return safe;
+}
+
+function renderReportSection(title, content) {
+    const lines = content.split("\n").map(line => line.trim()).filter(Boolean);
+    if (!lines.length) return "";
+
+    let html = "";
+    let items = [];
+    let listType = null;
+
+    function closeList() {
+        if (!items.length) return;
+        const tag = listType === "ordered" ? "ol" : "ul";
+        html += `<${tag}>${items.join("")}</${tag}>`;
+        items = [];
+        listType = null;
+    }
+
+    for (const line of lines) {
+        const bullet = line.match(/^[-*]\s+(.+)/);
+        const numbered = line.match(/^\d+[.)]\s+(.+)/);
+
+        if (bullet || numbered) {
+            const nextType = numbered ? "ordered" : "unordered";
+            if (listType && listType !== nextType) closeList();
+            listType = nextType;
+            items.push(`<li>${formatReportText((bullet || numbered)[1])}</li>`);
+        } else {
+            closeList();
+            html += `<p>${formatReportText(line)}</p>`;
+        }
+    }
+
+    closeList();
+    return `<section class="report-section"><h4>${escapeHTML(title)}</h4>${html}</section>`;
+}
+
+function renderInvestigationReport(data) {
+    const analysis = String(data.final_analysis || "");
+    const sections = [];
+    let title = "Investigation report";
+    let current = null;
+
+    for (const line of analysis.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        const heading = trimmed.match(/^#{1,3}\s+(.+)/);
+        if (heading) {
+            if (current) sections.push(current);
+            current = {
+                title: heading[1].replace(/\*\*/g, "").replace(/`/g, "").trim(),
+                content: ""
+            };
+            continue;
+        }
+
+        if (!current && !trimmed.startsWith("-")) {
+            const possibleTitle = trimmed.replace(/\*\*/g, "").replace(/`/g, "");
+            if (possibleTitle.length < 120) {
+                title = possibleTitle;
+                continue;
+            }
+        }
+
+        if (current) current.content += line + "\n";
+        else {
+            current = { title: "Investigation findings", content: line + "\n" };
+        }
+    }
+
+    if (current) sections.push(current);
+
+    const confirmed = data.root_cause_confirmed === true;
+
+    return `
+        <div class="report">
+            <div class="report-header">
+                <h3>${escapeHTML(title)}</h3>
+                <div class="report-badges">
+                    <span class="report-badge">${escapeHTML(data.status || "Completed")}</span>
+                    <span class="report-badge ${confirmed ? "confirmed" : "unconfirmed"}">
+                        Root cause ${confirmed ? "confirmed" : "unconfirmed"}
+                    </span>
+                </div>
+            </div>
+
+            <div class="report-stats">
+                <div class="report-stat">
+                    <span>Investigation steps</span>
+                    <strong>${Number(data.steps_executed) || 0}</strong>
+                </div>
+                <div class="report-stat">
+                    <span>Root-cause assessment</span>
+                    <strong>${confirmed ? "Confirmed" : "Not confirmed"}</strong>
+                </div>
+            </div>
+
+            ${sections.length
+                ? sections.map(section => renderReportSection(section.title, section.content)).join("")
+                : '<section class="report-section"><p class="report-empty">No investigation analysis returned.</p></section>'
+            }
+        </div>
+    `;
+}
+
+
+function showMessage(elementId, message, isError = false) {
+    const element = document.getElementById(elementId);
+    element.textContent = message;
+    element.style.color = isError ? "#ff727c" : "#91a0b8";
+}
+
+async function apiRequest(path, options = {}) {
+    const response = await fetch(API + path, options);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.detail || `Request failed (${response.status})`);
+    }
+
+    return data;
+}
+
+async function checkConnection() {
+    try {
+        await fetch("/health").then(response => {
+            if (!response.ok) throw new Error("API unavailable");
+        });
+        document.getElementById("connection").textContent = "● API Connected";
+    } catch {
+        document.getElementById("connection").textContent = "● API Disconnected";
+        document.getElementById("connection").style.color = "#ff727c";
+    }
+}
+
+async function loadIncidents() {
+    try {
+        const data = await apiRequest("/incidents");
+        incidents = data.incidents || [];
+
+        document.getElementById("totalCount").textContent = incidents.length;
+        document.getElementById("highCount").textContent =
+            incidents.filter(item => item.severity === "high").length;
+        document.getElementById("openCount").textContent =
+            incidents.filter(item => item.status === "open").length;
+        document.getElementById("resolvedCount").textContent =
+            incidents.filter(item => item.status === "resolved").length;
+
+        renderIncidents();
+
+        if (selectedIncidentId) {
+            const current = incidents.find(item => item.id === selectedIncidentId);
+            if (current) await selectIncident(selectedIncidentId);
+            else {
+                selectedIncidentId = null;
+                document.getElementById("incidentDetails").innerHTML =
+                    '<div class="empty">Select an incident to inspect it.</div>';
+            }
+        }
+    } catch (error) {
+        document.getElementById("incidentList").innerHTML =
+            `<div class="empty">${escapeHTML(error.message)}</div>`;
+    }
+}
+
+function renderIncidents() {
+    const container = document.getElementById("incidentList");
+
+    if (!incidents.length) {
+        container.innerHTML = '<div class="empty">No incidents found. Upload a CSV dataset to begin.</div>';
+        return;
+    }
+
+    container.innerHTML = incidents.map(item => `
+        <div class="incident ${item.id === selectedIncidentId ? "selected" : ""}"
+             onclick="selectIncident('${item.id}')">
+            <div class="incident-top">
+                <span class="incident-name">${escapeHTML(item.issue_type.replaceAll("_", " "))}</span>
+                <span class="badge ${escapeHTML(item.severity)}">${escapeHTML(item.severity)}</span>
+            </div>
+            <div class="incident-meta">
+                ${escapeHTML(item.status)} · ${escapeHTML(item.id.slice(0, 8))}
+            </div>
+        </div>
+    `).join("");
+}
+
+async function uploadCSV() {
+    const fileInput = document.getElementById("csvFile");
+    const button = document.getElementById("uploadButton");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        showMessage("uploadMessage", "Select a CSV file first.", true);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    button.disabled = true;
+    button.textContent = "Analyzing...";
+    showMessage("uploadMessage", "Uploading and detecting incidents...");
+
+    try {
+        const result = await apiRequest("/ingestion/csv", {
+            method: "POST",
+            body: formData
+        });
+
+        showMessage(
+            "uploadMessage",
+            `Processed ${result.records_processed} records. Detected ${result.incident_count} incidents.`
+        );
+
+        fileInput.value = "";
+        await loadIncidents();
+    } catch (error) {
+        showMessage("uploadMessage", error.message, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Upload and analyze";
+    }
+}
+
+async function selectIncident(id) {
+    selectedIncidentId = id;
+    renderIncidents();
+
+    const container = document.getElementById("incidentDetails");
+    document.getElementById("selectedLabel").textContent = id.slice(0, 8);
+    container.innerHTML = '<div class="empty">Loading incident details...</div>';
+
+    try {
+        const item = await apiRequest(`/incidents/${id}`);
+
+        container.innerHTML = `
+            <div class="incident-top">
+                <strong>${escapeHTML(item.issue_type.replaceAll("_", " "))}</strong>
+                <span class="badge ${escapeHTML(item.severity)}">${escapeHTML(item.severity)}</span>
+            </div>
+
+            <p class="muted">${escapeHTML(item.message)}</p>
+            <p class="muted">ID: ${escapeHTML(item.id)}</p>
+            <p class="muted">Detected: ${escapeHTML(item.detected_at)}</p>
+
+            <div class="detail">
+                <h3>Incident evidence</h3>
+                <div>${renderEvidence(item.evidence)}</div>
+            </div>
+
+            <div class="detail">
+                <h3>Incident status</h3>
+                <select id="statusSelect">
+                    ${["open", "investigating", "resolved", "dismissed"].map(status =>
+                        `<option value="${status}" ${item.status === status ? "selected" : ""}>${status}</option>`
+                    ).join("")}
+                </select>
+                <button class="secondary" onclick="updateStatus('${item.id}')">Update status</button>
+            </div>
+
+            <div class="actions">
+                <button class="primary" id="investigateButton"
+                    onclick="investigate('${item.id}')">Investigate</button>
+            </div>
+
+            <div class="detail" id="investigationResult"></div>
+
+            <div class="detail">
+                <h3>Status history</h3>
+                <div>${renderStatusHistory(item.history || [])}</div>
+            </div>
+        `;
+    } catch (error) {
+        container.innerHTML = `<div class="empty">${escapeHTML(error.message)}</div>`;
+    }
+}
+
+async function updateStatus(id) {
+    const status = document.getElementById("statusSelect").value;
+
+    try {
+        await apiRequest(`/incidents/${id}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status })
+        });
+
+        await loadIncidents();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function investigate(id) {
+    const button = document.getElementById("investigateButton");
+    const result = document.getElementById("investigationResult");
+
+    button.disabled = true;
+    button.textContent = "investigating...";
+    result.innerHTML = '<p class="muted">Inspecting evidence and generating report. Please wait...</p>';
+
+    try {
+        const data = await apiRequest(`/incidents/${id}/investigate-ai`, {
+            method: "POST"
+        });
+
+        result.innerHTML = renderInvestigationReport(data);
+    } catch (error) {
+        result.innerHTML = `<p style="color:#ff727c">${escapeHTML(error.message)}</p>`;
+    } finally {
+        button.disabled = false;
+        button.textContent = "Investigate";
+    }
+}
+
+checkConnection();
+loadIncidents();
+</script>
+</body>
+</html>
